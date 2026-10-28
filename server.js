@@ -40,6 +40,52 @@ function isUniqueViolation(err) {
   return String(err.code || "").includes("CONSTRAINT") && /UNIQUE/i.test(err.message);
 }
 
+// ── Home page ───────────────────────────────────────────────────────
+// GET / — a small welcome page, so opening the bare URL shows the API is alive
+// (instead of Express's default "Cannot GET /"). It also reads the database,
+// so a working page proves the database connection works too.
+app.get("/", (req, res) => {
+  let toursLine;
+  try {
+    const { count } = db.prepare("SELECT COUNT(*) AS count FROM tours WHERE status = 'approved'").get();
+    toursLine = `${count} local tours are open for booking`;
+  } catch (err) {
+    toursLine = `The database is not reachable right now: ${err.message}`;
+  }
+  const where = process.env.TURSO_DATABASE_URL ? "Turso (hosted SQLite)" : "local SQLite file";
+
+  res.send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TravelGuide API</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+           font-family: system-ui, -apple-system, sans-serif; color: #fff; text-align: center;
+           background: linear-gradient(135deg, #0f766e, #1e3a8a); padding: 24px; box-sizing: border-box; }
+    main { max-width: 560px; }
+    h1 { font-size: 2.6rem; margin: 0 0 8px; }
+    .slogan { font-size: 1.3rem; opacity: 0.95; margin: 0 0 28px; }
+    .status { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 999px;
+              padding: 8px 18px; margin-bottom: 20px; }
+    p { line-height: 1.6; }
+    a { color: #fde68a; }
+    code { background: rgba(0,0,0,0.25); padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>🧭 TravelGuide</h1>
+    <p class="slogan">Explore China with the people who call it home.</p>
+    <div class="status">🟢 API is running</div>
+    <p>${toursLine}.<br>Database: ${where}</p>
+    <p>Try the data: <a href="/api/tours"><code>/api/tours</code></a></p>
+  </main>
+</body>
+</html>`);
+});
+
 // ── Auth Routes ─────────────────────────────────────────────────────
 
 // POST /api/auth/register
